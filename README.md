@@ -1,6 +1,6 @@
 VISÃO GERAL DO PROJETO:
 
-Este projeto consiste no desenvolvimento de um Sistema de Linha de Comando (CLI) (com a possibilidade de uma API mínima opcional, utilizando FastAPI ou Flask) para gerenciar um catálogo pessoal de filmes e séries.
+Este projeto consiste no desenvolvimento de um Sistema de Linha de Comando (CLI) para gerenciar um catálogo pessoal de filmes e séries.
 
 
 
@@ -63,13 +63,16 @@ HistoricoItem,_midia: Midia,__init__(...),Usado para registrar data/hora de conc
 
 ESTRUTURA PLANEJADA DE ARQUIVOS:
 
-Arquivo/Pasta,Propósito no Projeto
-/projeto_catalogo,Diretório Raiz
-├── src/,Contém o código-fonte principal do sistema.
-│   ├── modelos.py,"Implementa todas as classes de POO (Midia, Filme, Serie, etc.) e a lógica de negócio (herança, encapsulamento, validações, métodos especiais)."
-│   ├── dados.py,"Módulo para persistência (funções salvar/carregar mídias, episódios, usuários e listas em JSON ou SQLite) e a rotina de seed."
-│   └── cli.py,"Lógica da Interface de Linha de Comando (CLI) com subcomandos (ex: midia adicionar, serie atualizar-status)."
-├── tests/,Armazena os testes unitários (usando pytest) para garantir a integridade das regras e relatórios.
-├── settings.json,"Arquivo de configurações do sistema (ex: nota mínima para ""recomendado"", limite de listas personalizadas)."
-├── README.md,"Documentação do projeto (UML Textual, instruções de execução)."
-└── .gitignore,"Especifica arquivos e pastas a serem ignorados pelo Git (ex: ambientes virtuais, caches, e o arquivo de persistência .db ou .json)."
+Arquivo/Pasta      Propósito no Projeto
+/projeto_catalogo   Diretório Raiz
+├── src/            Contém o código-fonte principal do sistema.
+│   ├── modelos.py  Implementa todas as classes de POO (Midia, Filme, Serie, etc.) e a lógica de negócio (herança, encapsulamento,
+                    validações, métodos especiais).
+│   ├── dados.py    Módulo para persistência (funções salvar/carregar mídias, episódios, usuários e listas em JSON ou SQLite)
+                    e a rotina de seed.
+│   └── cli.py      Lógica da Interface de Linha de Comando (CLI) com subcomandos (ex: midia adicionar, serie atualizar-status).
+├── tests/          Armazena os testes unitários (usando pytest) para garantir a integridade das regras e relatórios.
+├── settings.json   Arquivo de configurações do sistema (ex: nota mínima para ""recomendado"", limite de listas personalizadas).
+├── README.md,      Documentação do projeto (UML Textual, instruções de execução)."
+└── .gitignore      Especifica arquivos e pastas a serem ignorados pelo Git (ex: ambientes virtuais, caches, e o arquivo de 
+                    persistência .db ou .json).
