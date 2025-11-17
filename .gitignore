@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.o
+*.pyd
+
+# Ambientes virtuais
+venv/
+.venv/
+env/
+
+# Ferramentas e testes
+.pytest_cache/
+.vscode/
+
+# Persistência local (Se usar SQLite)
+catalogo.db 
+
+# Dados de persistência (Se usar JSON e não quiser versionar os dados)
+dados_catalogo.json
