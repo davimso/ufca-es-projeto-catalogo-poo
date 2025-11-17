@@ -27,52 +27,225 @@ O sistema incluirá funcionalidades essenciais como cadastro de mídias , avalia
 
 UML TEXTUAL:
 
-Classe,Atributos (Privados),Métodos Principais (Públicos),Relacionamentos e Notas
-Midia,_titulo: str,__init__(...),"Classe Base. Herança: → Filme, → Serie."
-,_tipo: str (FILME/SERIE) ,"@property getters/setters (para validar título não vazio, ano positivo).",Duplicidade: titulo + tipo + ano deve ser único.
-,_genero: str ,__eq__(other): bool (Compara por título + tipo).,
-,_ano: int ,__str__() / __repr__() (Exibição formatada).,
-,_classificacao: str ,,
-,_elenco: list[str] ,,
-,"_status: str (NÃO ASSISTIDO, ASSISTINDO, ASSISTIDO) ",,
-Filme,_duracao: int (minutos) ,__init__(...),Herda de Midia.
-,_nota: float (0-10) ,@property duracao (Validação >0).,
-,_data_conclusao: datetime,@property nota (Validação 0-10).,
-,,avaliar(nota: float).,
-,,__lt__(other): bool (Para ordenar por nota média).,
-Serie,"_temporadas: dict[int, Temporada]",__init__(...),Herda de Midia.
-,,adicionar_temporada(...),Composição: Agrega Temporada.
-,,__len__(): int (Total de episódios).,
-,,calcular_nota_media_serie() (Média dos episódios).,
-,,atualizar_status_automatico() (Muda para 'ASSISTIDA' se todos episódios concluídos).,
-Temporada,_numero: int,adicionar_episodio(...),Composição: Contém Episodio.
-,"_episodios: dict[int, Episodio]",,
-Episodio,_numero: int,@property numero (Validação positiva).,Mídia avaliável (nota 0-10).
-,_titulo: str ,@property duracao/nota (Validação >0 e 0-10).,
-,_duracao: int ,avaliar(nota: float).,
-,_data_lancamento: date ,,
-,_status: str ,,
-,_nota: float (opcional) ,,
-Usuario,_nome: str,__init__(...),Possui listas personalizadas e histórico.
-,"_listas: dict[str, ListaPersonalizada]",criar_lista(nome: str).,
-,_historico: list[HistoricoItem],adicionar_favorito(...).,
-ListaPersonalizada,_nome: str,adicionar_midia(...).,Limite de listas definido em settings.json.
-,_midias: list[Midia],remover_midia(...).,
-HistoricoItem,_midia: Midia,__init__(...),Usado para registrar data/hora de conclusão.
-,_data_conclusao: datetime,,
+Classe: Midia (Classe Base)
+
+Atributos Privados
+
+_titulo: str
+
+_tipo: str (FILME / SERIE)
+
+_genero: str
+
+_ano: int
+
+_classificacao: str
+
+_elenco: list[str]
+
+_status: str (NÃO ASSISTIDO, ASSISTINDO, ASSISTIDO)
+
+Métodos Públicos
+
+__init__(...)
+
+@property getters/setters
+
+valida título não vazio
+
+ano deve ser positivo
+
+__eq__(other) -> bool (compara por título + tipo)
+
+__str__() / __repr__() (formatação de exibição)
+
+Relacionamentos e Notas
+
+Herança: classe base de → Filme, → Serie
+
+Regra de duplicidade: combinação (título + tipo + ano) deve ser única
+
+Classe: Filme (Herda de Midia)
+
+Atributos Privados
+
+_duracao: int (minutos)
+
+_nota: float (0–10)
+
+_data_conclusao: datetime
+
+Métodos Públicos
+
+__init__(...)
+
+@property duracao (validar > 0)
+
+@property nota (validar 0–10)
+
+avaliar(nota: float)
+
+__lt__(other) -> bool (ordenação por nota média)
+
+Relacionamentos e Notas
+
+Herda completamente a estrutura de Midia
+
+Classe: Serie (Herda de Midia)
+
+Atributos Privados
+
+_temporadas: dict[int, Temporada]
+
+Métodos Públicos
+
+__init__(...)
+
+adicionar_temporada(...)
+
+__len__() -> int (total de episódios)
+
+calcular_nota_media_serie()
+
+atualizar_status_automatico()
+
+marca “ASSISTIDA” se todos os episódios concluídos
+
+Relacionamentos e Notas
+
+Composição: contém várias Temporada
+
+A série agrega temporadas, que agregam episódios
+
+Classe: Temporada
+
+Atributos Privados
+
+_numero: int
+
+_episodios: dict[int, Episodio]
+
+Métodos Públicos
+
+adicionar_episodio(...)
+
+Relacionamentos e Notas
+
+Composição forte: possui vários Episodio
+
+Classe: Episodio
+
+Atributos Privados
+
+_numero: int
+
+_titulo: str
+
+_duracao: int
+
+_data_lancamento: date
+
+_status: str
+
+_nota: float | None
+
+Métodos Públicos
+
+@property numero (validar positivo)
+
+@property duracao (validar > 0)
+
+@property nota (validar 0–10)
+
+avaliar(nota: float)
+
+Relacionamentos e Notas
+
+Episódio é uma entidade avaliável (nota 0–10)
+
+Classe: Usuario
+
+Atributos Privados
+
+_nome: str
+
+_listas: dict[str, ListaPersonalizada]
+
+_historico: list[HistoricoItem]
+
+Métodos Públicos
+
+__init__(...)
+
+criar_lista(nome: str)
+
+adicionar_favorito(...)
+
+Relacionamentos e Notas
+
+Possui listas personalizadas
+
+Mantém histórico (com data de conclusão)
+
+Classe: ListaPersonalizada
+
+Atributos Privados
+
+_nome: str
+
+_midias: list[Midia]
+
+Métodos Públicos
+
+adicionar_midia(...)
+
+remover_midia(...)
+
+Relacionamentos e Notas
+
+Limite de listas é definido em settings.json
+
+Classe: HistoricoItem
+
+Atributos Privados
+
+_midia: Midia
+
+_data_conclusao: datetime
+
+Métodos Públicos
+
+__init__(...)
+
+Relacionamentos e Notas
+
+Usado para registrar a conclusão de mídias
 
 ESTRUTURA PLANEJADA DE ARQUIVOS:
 
-Arquivo/Pasta      Propósito no Projeto
-/projeto_catalogo   Diretório Raiz
-├── src/            Contém o código-fonte principal do sistema.
-│   ├── modelos.py  Implementa todas as classes de POO (Midia, Filme, Serie, etc.) e a lógica de negócio (herança, encapsulamento,
-                    validações, métodos especiais).
-│   ├── dados.py    Módulo para persistência (funções salvar/carregar mídias, episódios, usuários e listas em JSON ou SQLite)
-                    e a rotina de seed.
-│   └── cli.py      Lógica da Interface de Linha de Comando (CLI) com subcomandos (ex: midia adicionar, serie atualizar-status).
-├── tests/          Armazena os testes unitários (usando pytest) para garantir a integridade das regras e relatórios.
-├── settings.json   Arquivo de configurações do sistema (ex: nota mínima para ""recomendado"", limite de listas personalizadas).
-├── README.md,      Documentação do projeto (UML Textual, instruções de execução)."
-└── .gitignore      Especifica arquivos e pastas a serem ignorados pelo Git (ex: ambientes virtuais, caches, e o arquivo de 
-                    persistência .db ou .json).
+/projeto_catalogo                # Diretório raiz do projeto
+├── src/                         # Código-fonte principal
+│   ├── modelos.py               # Classes de POO (Midia, Filme, Serie, etc.)
+│   │                             # + Lógica de negócio: herança, validações,
+│   │                             #   encapsulamento, métodos especiais
+│   ├── dados.py                 # Persistência (JSON/SQLite)
+│   │                             # + Funções para salvar/carregar mídias,
+│   │                             #   episódios, usuários e listas
+│   │                             # + Rotina de seed
+│   └── cli.py                   # Interface de Linha de Comando (CLI)
+│                                 #   com subcomandos (ex: midia adicionar,
+│                                 #   serie atualizar-status)
+│
+├── tests/                       # Testes unitários (pytest)
+│                                 # Garantem integridade das regras e relatórios
+│
+├── settings.json                # Configurações do sistema
+│                                 # (nota mínima p/ “recomendado”,
+│                                 #  limite de listas personalizadas, etc.)
+│
+├── README.md                    # Documentação geral
+│                                 # + UML textual
+│                                 # + instruções de execução
+│
+└── .gitignore                   # Arquivos/pastas ignorados pelo Git
+                                  # (venvs, caches, arquivo de persistência .db/.json)
