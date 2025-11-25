@@ -161,3 +161,16 @@ Abaixo está a representação **UML Textual** das classes principais do sistema
 
 ### **Função**
 - Registro de conclusões no histórico do usuário.
+
+
+### **Estrutura de Arquivos**
+/projeto_catalogo
+├── src/
+│   ├── modelos.py      # Implementa todas as classes de POO (Herança, Composição, Métodos Especiais, Validações).
+│   ├── dados.py        # Módulo para Persistência (salvar/carregar em JSON ou SQLite) e rotina de seed com mídias pré-cadastradas.
+│   └── cli.py          # Lógica da Interface de Linha de Comando (CLI) com subcomandos.
+├── tests/              # Arquivos de testes unitários usando Pytest.
+├── settings.json       # Configurações do sistema (nota mínima para "recomendado", limite de listas, multiplicador de duração).
+├── README.md           # Arquivo de documentação e diagrama.
+└── .gitignore          # Ignora arquivos de ambiente virtual, cache e persistência local.
+
