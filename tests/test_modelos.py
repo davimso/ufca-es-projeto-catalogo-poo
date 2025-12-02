@@ -1,7 +1,7 @@
 
 
 import pytest
-from src.modelos import Midia, Filme, Serie, Temporada, Episodio
+from ..src.modelos import Midia, Filme, Serie, Temporada, Episodio
 from datetime import datetime, date
 
 # --- Fixture de Dados Comuns (Ajudam a reutilizar objetos) ---
