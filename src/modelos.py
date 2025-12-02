@@ -44,7 +44,7 @@ class Midia:
     def status(self, novo_status:str):
         opcoes={"NÃO ASSISTIDO", "ASSISTIDO", "ASSISTINDO"}
         if novo_status.strip().upper() not in opcoes:
-            raise ValueError("Status inválido")
+            raise ValueError("O status deve ser uma das opções: NÃO ASSISTIDO, ASSISTINDO OU ASSISTIDO")
         self._status=novo_status.strip().upper()
     
     #getter para o ano
@@ -147,9 +147,68 @@ class Serie(Midia):
         #Chama o construtor da clsse base
         super().__init__(titulo, "SERIE", genero, ano, 0, classificacao, elenco, "NÃO ASSISTIDO")
         
-        #2. Inicializa a estrutura de composição: um dicionário para armazenar Temporada
+        #Inicializa a estrutura de composição: um dicionário para armazenar Temporada
         self._temporadas = {} #Chave: número da temporada (int), Valor: objeto Temporada
+
+    #Metodo para adicionar temporadas na série
+    def adicionar_temporada(self, temporada):
+
+        #Verifica se o objeto recebido é da classe Temporada
+        if not isinstance(temporada,Temporada):
+            raise TypeError("Somente temporadas podem ser adicionadas a uma série")
         
+        #Verifica a unicidade da temporada
+        numero_temporada = temporada.numero
+        if numero_temporada in self._temporadas:
+            raise ValueError(f"A Temporada de número {numero_temporada} já existe nesta série.")
+        
+        #Adiciona o objeto temporada ao dicionario
+        self._temporadas[numero_temporada]= temporada
+
+    #Metodo para calcular a nota média da série com base nas notas de todos os episodios que foram avaliados
+    def calcular_nota_serie(self):
+        totalNotas=0
+        contadorAvaliacao=0
+        for temporada in self._temporadas.values():
+            for episodio in temporada._episodios.values():
+                if episodio.nota is not None:
+                     totalNotas+=episodio.nota
+                     contadorAvaliacao+=1
+        
+        if contadorAvaliacao==0:
+            return None
+        
+        media=totalNotas/contadorAvaliacao
+        return round(media,2)
+    
+    #Metodo para atualização automatica do status da série
+    def atualizar_status_automatico(self):
+        if not self._temporadas:
+            #Se não há temporadas cadastradas, o status deve ser mantido como 'NÃO ASSISTIDO'.
+            return 
+            
+        todos_concluidos = True
+        
+        for temporada in self._temporadas.values():
+            for episodio in temporada._episodios.values(): 
+                
+                #Se encontrar qualquer episódio que não esteja "ASSISTIDO", 
+                if episodio.status != "ASSISTIDO":
+                    todos_concluidos = False
+                    break 
+            
+            if not todos_concluidos:
+                break 
+
+        #Atualiza o status da Série
+        if todos_concluidos:
+            self.status = "ASSISTIDA"
+        else:
+            if self.status == "ASSISTIDA":
+                 self.status = "ASSISTINDO"
+
+
+
           
 from datetime import date
 
@@ -245,8 +304,47 @@ class Temporada:
     Representa uma Temporada de uma Série.
     Atua como um container que agrega objetos Episodio.
     """
-    def __init__(self,numero_episodios, duracao_total_minutos,numero_temporada):
-        pass
+    def __init__(self,numero_temporada: int):
+
+        self._numero=None
+        
+        self._episodios={}
+
+        self.numero=numero_temporada
+
+    #getter para número de episodios
+    @property
+    def numero(self):
+        return self._numero
+    
+    #setter para o numero de episódios, verifica se é um número inteiro positivo
+    @numero.setter
+    def numero(self,novo_numero:int):
+        if not isinstance(novo_numero, int) or novo_numero <= 0:
+            raise ValueError("O numero da temporada deve ser um inteiro positivo")
+        self._numero=novo_numero
+
+
+    #Métodos Especias:
+
+    #Método para calcular o número total de episodios por temporada
+    def __len__(self):
+        return len(self._episodios)
+    
+    #Método para adicionar episodios
+    def adicionar_episodio(self,episodio):
+
+        #Verificação se o objeto recebido pertence a classe Episódio
+        if not isinstance(episodio,Episodio):
+            raise TypeError("Apenas episodios podem ser adicionados á uma temporada")
+        
+        #Verificação da unicidade do episódio
+        numero_episodio=episodio.numero
+        if numero_episodio in self._episodios:
+            raise ValueError(f"O Episódio de número {numero_episodio} já existe na Temporada {self.numero}.")
+
+        self._episodios[numero_episodio]=episodio
+
     
 
 class Usuario:
@@ -254,23 +352,99 @@ class Usuario:
     Gerencia as coleções e o histórico de um usuário.
     Possui listas personalizadas (ListaPersonalizada) e registra o histórico de visualização.
     """
-    def __init__(self,nome,listas,historico):
-        pass
-    
+    #Adiciona limite_listas como parâmetro opcional (valor será lido do settings.json pelo CLI)
+    def __init__(self, nome: str, limite_listas: int = 5):
+        
+        #Inicializa atributos básicos
+        self._nome = nome
+        self._limite_listas = limite_listas 
+        
+        #Inicializa as coleções de Composição
+        self._listas = {}     
+        self._historico = [] 
+
+     #Metodo para adicionar uma mídia concluída ao histórico.
+    def adicionar_ao_historico(self, midia, data_conclusao):
+        # A validação de status 'ASSISTIDO'será feita no construtor do HistoricoItem
+        item = HistoricoItem(midia, data_conclusao) 
+        self._historico.append(item)
 
 class ListaPersonalizada:
     """
     Define uma lista customizada do usuário ("Para assistir", "Favoritos", etc.).
     Contém uma coleção de objetos Midia. O limite é definido em settings.json.
     """
-    def __init__(self,nome,midias):
-        pass
+   
+    def __init__(self, nome: str):
+            self._nome = nome
+            self._midias = [] # Lista de objetos Midia
+
     
+    #Adiciona uma Midia a lista
+    def adicionar_midia(self, midia):
+
+        #Validação de tipo
+        if not isinstance(midia, Midia):
+            raise TypeError("Apenas objetos do tipo Midia (Filme ou Série) podem ser adicionados à lista.")
+            
+        #Validação de unicidade na lista
+        if midia in self._midias:
+            raise ValueError(f"'{midia.titulo}' já está na lista '{self._nome}'.")
+            
+        self._midias.append(midia)
+
+    #Método para remover uma Midia da lista   
+    def remover_midia(self, midia):
+        try:
+            self._midias.remove(midia)
+        except ValueError:
+            #Caso a mídia não esteja na lista
+            raise ValueError(f"'{midia.titulo}' não foi encontrado na lista '{self._nome}'.")
+
+    #Método Especial para retornar o número de mídias na lista
+    def __len__(self):
+        return len(self._midias)
+    
+
 class HistoricoItem:
     """
     Um item no histórico de visualização do usuário.
     Registra a mídia concluída e a data/hora exata de conclusão, essencial para relatórios de consumo.
     """
     def __init__(self,midia, data_conclusao):
-        pass
+
+        #Verifica se o objeto a ser recebidp é uma Mídia(Filme ou Série)
+        if not isinstance(midia, Midia):
+            raise TypeError("Apenas objetos Midia podem ser registrados no histórico.")
+            
+        #Verifica se a mídia está concluída
+        if midia.status != "ASSISTIDO":
+            raise ValueError("Somente mídias concluídas ('ASSISTIDO') podem ser adicionadas ao histórico.")
+        
+        self._midia = midia
+        self._data_conclusao = data_conclusao
+
+    #getter para a duração da mídia    
+    @property
+    def duracao_concluida(self):
+        #Para Filmes, acessa a propriedade duracao da classe Filme
+        if self._midia._tipo == "FILME":
+            return self._midia.duracao
+        
+        #Para Séries, deve-se somar a duração dos episódios assistidos
+        if self._midia._tipo == "SERIE":
+            duracao_serie = 0
+            for temporada in self._midia._temporadas.values():
+                for episodio in temporada._episodios.values():
+                    # Adiciona a duração de cada episódio
+                    duracao_serie += episodio.duracao
+            return duracao_serie
+        
+        #Caso não seja um tipo válido
+        return 0
+    
+    #Método especial para a exibição
+    def __str__(self):
+        return f"Registro: {self._midia.titulo} concluído em {self._data_conclusao.strftime('%Y-%m-%d')}"
+       
     
