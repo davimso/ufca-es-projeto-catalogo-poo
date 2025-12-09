@@ -1,4 +1,4 @@
-from .modelos import Midia, Filme, Serie, Temporada, Episodio, Usuario, HistoricoItem
+from src.modelos import Midia, Filme, Serie, Temporada, Episodio, Usuario, HistoricoItem
 import sqlite3
 from datetime import datetime
 from datetime import timedelta

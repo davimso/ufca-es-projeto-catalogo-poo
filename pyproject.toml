@@ -1,0 +1,7 @@
+# pyproject.toml
+
+[tool.pytest.ini_options]
+# Define a pasta raiz do projeto onde os testes devem procurar módulos (src)
+python_paths = [
+    "src",
+]
