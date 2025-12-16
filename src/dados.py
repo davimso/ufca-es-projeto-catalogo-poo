@@ -61,7 +61,7 @@ def criar_tabelas():
         )
     """)
     
-    # Tabela 4: HISTORICO (Essencial para o Relatório da Entrega 3)
+    # Tabela 4: HISTORICO
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS historico (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,9 +71,17 @@ def criar_tabelas():
         )
     """)
     
-    # Tabela 5: LISTAS_PERSONALIZADAS (Opcional, para listas do usuário)
-    # Aqui, para simplificar, usaremos apenas o Histórico por enquanto.
+    # Tabela 5: LISTAS_PERSONALIZADAS
     
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS listas_conteudo (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome_lista TEXT NOT NULL,
+            midia_id INTEGER,
+            FOREIGN KEY(midia_id) REFERENCES midias(id)
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -210,6 +218,7 @@ def carregar_catalogo():
         # Reconstrução de Séries
         if tipo == 'SERIE':
             serie = Serie(titulo, genero, ano, classificacao, [])
+            serie.status = status
             
             # Adiciona as temporadas reconstruídas à série
             if midia_id in temporadas_por_serie:
@@ -299,55 +308,216 @@ def gerar_relatorio_tempo_assistido(historico: list, periodo: str = 'mes'):
 
 def salvar_midia(midia_obj):
     """
-    Salva (atualiza) o status e a nota de um objeto Midia ou de seus Episódios
-    no banco de dados.
+    Persiste (INSERT ou UPDATE) um objeto Midia (Filme/Serie) e seus detalhes
+    no banco de dados SQLite.
     """
     conn = get_conn()
     cursor = conn.cursor()
     
-    # Esta função é mais complexa e é idealmente chamada de dentro de um método
-    # de gerenciamento de catálogo, mas vamos focar na atualização do status
-    
-    # 1. Atualizar o status da Midia base (Filme ou Serie)
-    # NOTA: Assumimos que o objeto Midia/Filme/Serie possui um 'id' do BD como atributo,
-    # que foi atribuído durante o carregamento. 
-    # Para simplicidade, vamos buscar pelo titulo/ano para encontrar o ID.
-    
     try:
-        cursor.execute("""
-            UPDATE midias SET status = ? 
-            WHERE titulo = ? AND ano = ?
-        """, (midia_obj.status, midia_obj.titulo, midia_obj.ano))
+        # 1. BUSCA O ID: Garante que o objeto seja vinculado ao registro correto no banco
+        cursor.execute("SELECT id FROM midias WHERE titulo = ? AND ano = ?", 
+                       (midia_obj.titulo, midia_obj.ano))
+        midia_id_result = cursor.fetchone()
         
-        # 2. Se for uma SÉRIE, precisamos atualizar o status e nota de CADA EPISÓDIO
-        if midia_obj._tipo == 'SERIE':
-            midia_id_result = cursor.execute("SELECT id FROM midias WHERE titulo = ? AND ano = ?", 
-                                             (midia_obj.titulo, midia_obj.ano)).fetchone()
+        if midia_id_result:
+            # --- RAMO DE UPDATE (Mídia Existente) ---
+            midia_id = midia_id_result[0]
             
-            if midia_id_result:
-                serie_id = midia_id_result[0]
+            # ATUALIZAÇÃO CRUCIAL: Salva o status consolidado da série (ex: 'ASSISTINDO')
+            cursor.execute("""
+                UPDATE midias 
+                SET status = ?, genero = ?, classificacao = ?, duracao = ?
+                WHERE id = ?
+            """, (midia_obj.status, midia_obj._genero, midia_obj._classificacao, 
+                  midia_obj._duracao, midia_id))
+            
+            # Atualiza ou Insere novos elementos da composição (Temporadas/Episódios)
+            if midia_obj._tipo == 'SERIE':
+                _atualizar_composicao_serie(cursor, midia_obj, midia_id)
                 
-                for temporada in midia_obj._temporadas.values():
-                    # Buscar o ID da temporada no BD
-                    temp_id_result = cursor.execute("SELECT id FROM temporadas WHERE serie_id = ? AND numero = ?",
-                                                    (serie_id, temporada.numero)).fetchone()
-                    
-                    if temp_id_result:
-                        temp_id = temp_id_result[0]
-                        
-                        for episodio in temporada._episodios.values():
-                            # Atualiza status e nota do Episódio
-                            cursor.execute("""
-                                UPDATE episodios SET status = ?, nota = ?
-                                WHERE temporada_id = ? AND numero = ?
-                            """, (episodio.status, episodio.nota, temp_id, episodio.numero))
-                            
-        conn.commit()
-        print(f"Status/Notas de '{midia_obj.titulo}' atualizados com sucesso no BD.")
+            print(f"✅ Banco: '{midia_obj.titulo}' atualizado com sucesso.")
+
+        else:
+            # --- RAMO DE INSERT (Nova Mídia) ---
+            cursor.execute("""
+                INSERT INTO midias (titulo, tipo, genero, ano, classificacao, duracao, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (midia_obj.titulo, midia_obj._tipo, midia_obj._genero, midia_obj.ano, 
+                  midia_obj._classificacao, midia_obj._duracao, midia_obj.status))
+            
+            midia_id = cursor.lastrowid
+
+            if midia_obj._tipo == 'SERIE':
+                _inserir_composicao_serie(cursor, midia_obj, midia_id)
+                
+            print(f"🚀 Banco: '{midia_obj.titulo}' inserido com sucesso.")
+            
+        conn.commit() # Confirma a transação no arquivo .db
         
     except sqlite3.Error as e:
-        print(f"Erro ao salvar dados no SQLite: {e}")
-        conn.rollback()
+        print(f"❌ Erro ao salvar dados no SQLite: {e}")
+        conn.rollback() # Reverte em caso de erro para evitar dados corrompidos
         
+    finally:
+        conn.close()
+
+def _inserir_composicao_serie(cursor, serie_obj, serie_id):
+    """Função auxiliar para inserir Temporadas e Episódios de uma nova Série."""
+    for temporada in serie_obj._temporadas.values():
+        # INSERT Temporada
+        cursor.execute("INSERT INTO temporadas (serie_id, numero) VALUES (?, ?)",
+                       (serie_id, temporada.numero))
+        temp_id = cursor.lastrowid
+        
+        # INSERT Episódios
+        for episodio in temporada._episodios.values():
+            cursor.execute("""
+                INSERT INTO episodios (temporada_id, numero, titulo, duracao, nota, status)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (temp_id, episodio.numero, episodio._titulo, episodio.duracao, episodio.nota, episodio.status))
+
+def _atualizar_composicao_serie(cursor, serie_obj, serie_id):
+    """
+    Função auxiliar que lida com a atualização de episódios existentes 
+    E a inserção de temporadas novas em séries já cadastradas.
+    """
+    for temporada in serie_obj._temporadas.values():
+        # Verifica se esta temporada específica já existe no banco
+        cursor.execute("SELECT id FROM temporadas WHERE serie_id = ? AND numero = ?",
+                       (serie_id, temporada.numero))
+        temp_id_result = cursor.fetchone()
+        
+        if temp_id_result:
+            # TEMPORADA EXISTE: Apenas atualiza status/notas dos episódios
+            temp_id = temp_id_result[0]
+            for episodio in temporada._episodios.values():
+                cursor.execute("""
+                    UPDATE episodios SET status = ?, nota = ?
+                    WHERE temporada_id = ? AND numero = ?
+                """, (episodio.status, episodio.nota, temp_id, episodio.numero))
+        else:
+            # TEMPORADA NOVA: Insere a temporada e todos os seus episódios
+            cursor.execute("INSERT INTO temporadas (serie_id, numero) VALUES (?, ?)",
+                           (serie_id, temporada.numero))
+            nova_temp_id = cursor.lastrowid
+            
+            for episodio in temporada._episodios.values():
+                cursor.execute("""
+                    INSERT INTO episodios (temporada_id, numero, titulo, duracao, nota, status)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (nova_temp_id, episodio.numero, episodio._titulo, 
+                      episodio.duracao, episodio.nota, episodio.status))
+                
+def salvar_listas_usuario(usuario_obj):
+    """Percorre as listas personalizadas do usuário e salva no SQLite."""
+    conn = get_conn()
+    cursor = conn.cursor()
+    try:
+        # Limpa as listas antigas para evitar duplicatas ao salvar novamente
+        cursor.execute("DELETE FROM listas_conteudo")
+        
+        for nome_lista, lista_obj in usuario_obj.listas.items():
+            for midia in lista_obj._midias:
+                # Busca o ID da mídia para salvar a referência
+                cursor.execute("SELECT id FROM midias WHERE titulo = ?", (midia.titulo,))
+                res = cursor.fetchone()
+                if res:
+                    midia_id = res[0]
+                    cursor.execute("""
+                        INSERT INTO listas_conteudo (nome_lista, midia_id) 
+                        VALUES (?, ?)
+                    """, (nome_lista, midia_id))
+
+        conn.commit()
+
+    except sqlite3.Error as e:
+        print(f"Erro ao salvar listas: {e}")
+    finally:
+        conn.close()
+
+def salvar_historico_usuario(usuario_obj):
+    """
+    Percorre a lista de objetos HistoricoItem do usuário 
+    e persiste no banco de dados.
+    """
+    conn = get_conn()
+    cursor = conn.cursor()
+    
+    try:
+        # Limpamos o histórico antigo para evitar duplicatas (ou use uma lógica de UPSERT)
+        cursor.execute("DELETE FROM historico")
+        
+        for item in usuario_obj._historico:
+            # Precisamos do ID da mídia no banco para criar a relação
+            cursor.execute("SELECT id FROM midias WHERE titulo = ?", (item.midia.titulo,))
+            res = cursor.fetchone()
+            
+            if res:
+                midia_id = res[0]
+                # item.data_conclusao é um objeto datetime, o SQLite aceita como string
+                cursor.execute("""
+                    INSERT INTO historico (midia_id, data_conclusao)
+                    VALUES (?, ?)
+                """, (midia_id, item.data_conclusao.strftime('%Y-%m-%d %H:%M:%S')))
+        
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"❌ Erro ao salvar histórico: {e}")
+    finally:
+        conn.close()
+
+def carregar_listas_personalizadas(usuario_obj, midias_catalogo):
+    """Lê a tabela listas_conteudo e preenche o objeto Usuario."""
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT nome_lista, midia_id FROM listas_conteudo")
+    
+    for nome_lista, midia_id in cursor.fetchall():
+        if nome_lista not in usuario_obj.listas:
+            usuario_obj.criar_lista(nome_lista)
+        
+        if midia_id in midias_catalogo:
+            midia_obj = midias_catalogo[midia_id]
+            usuario_obj.listas[nome_lista].adicionar_midia(midia_obj)
+    conn.close()
+    
+def excluir_midia_do_banco(titulo, ano):
+    """
+    Remove a mídia e todas as suas dependências (temporadas/episódios/histórico) do SQLite.
+    """
+    conn = get_conn()
+    cursor = conn.cursor()
+    try:
+        # 1. Busca o ID da mídia para localizar as dependências
+        cursor.execute("SELECT id FROM midias WHERE titulo = ? AND ano = ?", (titulo, ano))
+        res = cursor.fetchone()
+        
+        if res:
+            midia_id = res[0]
+            
+            # 2. Deletar episódios vinculados às temporadas desta série
+            cursor.execute("""
+                DELETE FROM episodios WHERE temporada_id IN 
+                (SELECT id FROM temporadas WHERE serie_id = ?)
+            """, (midia_id,))
+            
+            # 3. Deletar temporadas
+            cursor.execute("DELETE FROM temporadas WHERE serie_id = ?", (midia_id,))
+            
+            # 4. Deletar registros no histórico
+            cursor.execute("DELETE FROM historico WHERE midia_id = ?", (midia_id,))
+            
+            # 5. Deletar a mídia principal
+            cursor.execute("DELETE FROM midias WHERE id = ?", (midia_id,))
+            
+            conn.commit()
+            return True
+        return False
+        
+    except sqlite3.Error as e:
+        print(f"❌ Erro ao excluir no banco de dados: {e}")
+        conn.rollback()
+        return False
     finally:
         conn.close()

@@ -182,31 +182,33 @@ class Serie(Midia):
         return round(media,2)
     
     #Metodo para atualização automatica do status da série
+    #Atualiza o status da Série baseando-se na conclusão dos episódios.
+    #Se novos episódios não assistidos forem detectados, o status retrocede de ASSISTIDA para ASSISTINDO.
+    
     def atualizar_status_automatico(self):
+   
         if not self._temporadas:
-            #Se não há temporadas cadastradas, o status deve ser mantido como 'NÃO ASSISTIDO'.
+            #Se não há temporadas, mantém como está ou define padrão
             return 
             
         todos_concluidos = True
+        pelo_menos_um_visto = False
         
+        #Percorre a hierarquia de composição: Série -> Temporadas -> Episódios
         for temporada in self._temporadas.values():
             for episodio in temporada._episodios.values(): 
-                
-                #Se encontrar qualquer episódio que não esteja "ASSISTIDO", 
-                if episodio.status != "ASSISTIDO":
+                if episodio.status == "ASSISTIDO":
+                    pelo_menos_um_visto = True
+                else:
                     todos_concluidos = False
-                    break 
-            
-            if not todos_concluidos:
-                break 
 
-        #Atualiza o status da Série
+        #Aplicação da Regra de Negócio de Transição de Status
         if todos_concluidos:
-            self.status = "ASSISTIDA"
+            self.status = "ASSISTIDO"
+        elif pelo_menos_um_visto:
+            self.status = "ASSISTINDO"
         else:
-            if self.status == "ASSISTIDA":
-                 self.status = "ASSISTINDO"
-
+            self.status = "NÃO ASSISTIDO"
 
 
           
@@ -217,7 +219,7 @@ class Episodio:
     Representa um Episódio. É a menor unidade de mídia avaliável dentro de uma Série.
     Contém detalhes como número, título, duração, nota e status de visualização.
     """
-    def __init__(self, numero: int, titulo: str, duracao: int, data_lancamento: date, nota: float = None, status: str = "NÃO ASSISTIDO"):
+    def __init__(self, numero: int, titulo: str, duracao: int, data_lancamento=None , nota: float = None, status: str = "NÃO ASSISTIDO"):
 
         #Inicializando atributos que serão validados
         self._numero = None
@@ -351,7 +353,6 @@ class Usuario:
     Gerencia as coleções e o histórico de um usuário.
     Possui listas personalizadas (ListaPersonalizada) e registra o histórico de visualização.
     """
-    #Adiciona limite_listas como parâmetro opcional (valor será lido do settings.json pelo CLI)
     def __init__(self, nome: str, limite_listas: int = 5):
         
         #Inicializa atributos básicos
@@ -359,12 +360,39 @@ class Usuario:
         self._limite_listas = limite_listas 
         
         #Inicializa as coleções de Composição
-        self._listas = {}     
+        self._listas = {}  
         self._historico = [] 
 
-     #Metodo para adicionar uma mídia concluída ao histórico.
+    #getter para as listas personalizadas
+    @property
+    def listas(self):
+        """Retorna o dicionário de listas personalizadas."""
+        return self._listas
+
+    
+    def criar_lista(self, nome_lista: str):
+        """
+        Cria uma nova ListaPersonalizada, aplicando a regra de limite.
+        """
+        nome_normalizado = nome_lista.strip().upper()
+        
+        if nome_normalizado in self._listas:
+            raise ValueError(f"A lista '{nome_lista}' já existe.")
+
+        #Verifica o limite lido do settings.json
+        if len(self._listas) >= self._limite_listas:
+            raise ValueError(
+                f"Limite de listas atingido. O usuário pode ter no máximo {self._limite_listas} listas."
+            )
+
+        #Criação e adição da ListaPersonalizada
+        nova_lista = ListaPersonalizada(nome_normalizado)
+        self._listas[nome_normalizado] = nova_lista
+        return nova_lista
+
+    #Metodo para adicionar uma mídia concluída ao histórico.
     def adicionar_ao_historico(self, midia, data_conclusao):
-        # A validação de status 'ASSISTIDO'será feita no construtor do HistoricoItem
+        #A validação de status 'ASSISTIDO'será feita no construtor do HistoricoItem
         item = HistoricoItem(midia, data_conclusao) 
         self._historico.append(item)
 
@@ -393,12 +421,23 @@ class ListaPersonalizada:
         self._midias.append(midia)
 
     #Método para remover uma Midia da lista   
-    def remover_midia(self, midia):
-        try:
-            self._midias.remove(midia)
-        except ValueError:
-            #Caso a mídia não esteja na lista
-            raise ValueError(f"'{midia.titulo}' não foi encontrado na lista '{self._nome}'.")
+    def remover_midia(self, titulo_remover):
+        """Procura a mídia pelo título e remove o objeto correspondente."""
+        # Normaliza o título para a busca (minúsculas e sem espaços extras)
+        titulo_remover = titulo_remover.strip().lower()
+        
+        midia_encontrada = None
+        for midia in self._midias:
+            if midia.titulo.lower() == titulo_remover:
+                midia_encontrada = midia
+                break
+        
+        if midia_encontrada:
+            self._midias.remove(midia_encontrada)
+            return True
+        else:
+            # Lança uma exceção amigável ou retorna False
+            raise ValueError(f"Mídia '{titulo_remover}' não encontrada na lista.")
 
     #Método Especial para retornar o número de mídias na lista
     def __len__(self):

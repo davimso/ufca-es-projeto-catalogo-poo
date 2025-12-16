@@ -161,3 +161,108 @@ Abaixo está a representação **UML Textual** das classes principais do sistema
 
 ### **Função**
 - Registro de conclusões no histórico do usuário.
+
+# 🎬 Sistema de Gerenciamento de Catálogo de Mídias
+
+Aplicação de **linha de comando (CLI)** desenvolvida em **Python** para gestão personalizada de **filmes e séries**.  
+O sistema permite rastrear progresso de consumo, aplicar **avaliações granulares**, gerar **relatórios de uso** e persistir dados em **SQLite**, utilizando fortemente **Programação Orientada a Objetos (POO)**.
+
+---
+
+## 🚀 Como Executar
+
+### Pré-requisitos
+- Python **3.10+**
+
+### Execução
+```bash
+cd projeto_catalogo
+python -m src.cli
+
+projeto_catalogo/
+├── src/
+│   ├── modelos.py   # Classes de domínio (POO, herança, composição, validações)
+│   ├── dados.py     # Camada de persistência (SQLite, CRUD, reconstrução de objetos)
+│   ├── cli.py       # Interface de Linha de Comando (menus e interação)
+│   └── config.py    # Leitura e centralização de configurações (settings.json)
+├── settings.json    # Configurações externas do sistema
+└── catalogo.db      # Banco de dados SQLite (gerado automaticamente)
+## 🛠️ Funcionalidades Implementadas (Entrega Final)
+
+### 1️⃣ Gestão Completa de Catálogo (CRUD)
+
+#### Cadastro
+- Inclusão de **Filmes**
+- Inclusão de **Séries**, com suporte a múltiplas **temporadas** e **episódios**
+
+#### Leitura
+- Exibição formatada do catálogo
+- Ordenação por título
+
+#### Atualização
+- Alteração de **status**: `NÃO ASSISTIDO`, `ASSISTINDO`, `ASSISTIDO`
+- Atribuição de **notas**
+
+#### Remoção
+- Exclusão física de mídias
+- Remoção em cascata manual de temporadas e episódios no banco
+
+---
+
+### 2️⃣ Regras de Negócio e POO
+
+#### Atualização Automática de Status (Séries)
+- Uma série é marcada como `ASSISTIDO` **somente** quando **todos os episódios** de **todas as temporadas** forem concluídos
+- Ao adicionar novos episódios, o status retrocede automaticamente para `ASSISTINDO`
+
+#### Listas Personalizadas
+- Criação de listas como **Favoritos**, **Para Ver Depois**, etc.
+- Respeita o **limite máximo configurável** em `settings.json`
+
+#### Composição Granular
+- Episódios possuem **status** e **nota próprios**, independentes da série
+
+---
+
+### 3️⃣ Relatórios e Configurações
+
+#### Relatório de Tempo Assistido
+- Cálculo do tempo total de consumo nos **últimos 30 dias**
+
+#### Configurações Dinâmicas (JSON)
+- Multiplicador de conversão de **minutos → horas**
+- Limites de listas personalizadas
+- Ajustes sem necessidade de alterar o código-fonte
+
+---
+
+## 📊 Modelagem de Dados (Diagrama de Classes)
+
+O sistema utiliza **herança** e **composição profunda**:
+
+- **Midia** (classe base)
+  - **Filme**
+  - **Serie**
+    - **Temporada**
+      - **Episodio**
+
+Essa abordagem garante:
+- Alto nível de reutilização de código
+- Regras de negócio encapsuladas
+- Fácil manutenção e extensibilidade
+
+---
+
+## 👤 Autor
+
+**Davi**  
+Desenvolvedor Principal
+
+---
+
+## 📌 Tecnologias Utilizadas
+
+- Python 3.10+
+- SQLite
+- Programação Orientada a Objetos (POO)
+- CLI (Interface de Linha de Comando)
